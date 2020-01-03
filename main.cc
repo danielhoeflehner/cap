@@ -1,7 +1,8 @@
-#include "args.h"
-#include "argument.h"
+#include "cap.h"
 
 #include <iostream>
+
+using namespace cap;
 
 int main(int argc, char const *argv[])
 {
@@ -14,11 +15,13 @@ int main(int argc, char const *argv[])
                            .SetLong("path"))
                   .GetMatches();
 
-  if (auto fileValue = args.Get("file")) {
+  if (auto fileValue = args.Get("file"))
+  {
     std::cout << fileValue.value() << std::endl;
   }
 
-  if (auto pathValue = args.Get("path")) {
+  if (auto pathValue = args.Get("path"))
+  {
     std::cout << pathValue.value() << std::endl;
   }
 
