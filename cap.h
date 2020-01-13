@@ -10,6 +10,7 @@ namespace cap {
 
 class Argument {
  private:
+  bool required_ = false;
   std::string long_;
   std::string name_;
   char short_;
@@ -19,27 +20,29 @@ class Argument {
   Argument() = delete;
   Argument(std::string name);
   static auto WithName(std::string name) -> Argument;
-  auto GetShort() -> char;
+  auto GetShort() const -> char;
   auto SetShort(char s) -> Argument &;
-  auto GetLong() -> std::string;
+  auto GetLong() const -> std::string;
   auto SetLong(std::string l) -> Argument &;
   auto SetValue(std::string value) -> Argument &;
-  auto GetValue() const -> std::string;
+  auto GetValue() const -> std::optional<std::string>;
   auto GetName() const -> std::string;
+  auto Required() -> Argument &;
+  auto IsRequired() const -> bool;
 };
 
 Argument::Argument(std::string name) : name_(name){};
 
 auto Argument::WithName(std::string name) -> Argument { return Argument(name); }
 
-auto Argument::GetShort() -> char { return short_; }
+auto Argument::GetShort() const -> char { return short_; }
 
 auto Argument::SetShort(char s) -> Argument & {
   short_ = s;
   return *this;
 }
 
-auto Argument::GetLong() -> std::string { return long_; }
+auto Argument::GetLong() const -> std::string { return long_; }
 
 auto Argument::SetLong(std::string l) -> Argument & {
   long_ = l;
@@ -51,9 +54,22 @@ auto Argument::SetValue(std::string value) -> Argument & {
   return *this;
 }
 
-auto Argument::GetValue() const -> std::string { return value_; }
+auto Argument::GetValue() const -> std::optional<std::string> {
+  if (value_.size() > 0) {
+    return value_;
+  }
+
+  return std::nullopt;
+}
 
 auto Argument::GetName() const -> std::string { return name_; }
+
+auto Argument::Required() -> Argument & {
+  required_ = true;
+  return *this;
+}
+
+auto Argument::IsRequired() const -> bool { return required_; }
 
 class Args {
  private:
@@ -92,21 +108,28 @@ auto Args::Parse() -> Args & {
     if (raw_args_[i].starts_with("--")) {
       std::string name = raw_args_[i].substr(2);
       std::string v = raw_args_[i + 1];
-      for (int j = 0; j < num_args_; ++j) {
-        if (args_[j].GetLong() == name) {
-          args_[j].SetValue(v);
+      for (auto &arg : args_) {
+        if (arg.GetLong() == name) {
+          arg.SetValue(v);
         }
       }
     } else if (raw_args_[i].starts_with("-")) {
       char shortName = raw_args_[i][1];
       std::string v = raw_args_[i + 1];
-      for (int j = 0; j < num_args_; ++j) {
-        if (args_[j].GetShort() == shortName) {
-          args_[j].SetValue(v);
+      for (auto &arg : args_) {
+        if (arg.GetShort() == shortName) {
+          arg.SetValue(v);
         }
       }
     } else {
-      args_[i].SetValue(raw_args_[i]);
+      // args_[i].SetValue(raw_args_[i]);
+    }
+  }
+
+  for (auto const &arg : args_) {
+    if (arg.IsRequired() && !arg.GetValue().has_value()) {
+      std::cout << "Is required but not set:" << arg.GetName() << ":"
+                << std::endl;
     }
   }
 

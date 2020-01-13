@@ -6,8 +6,14 @@ using namespace cap;
 
 int main(int argc, char const *argv[]) {
   Args args = Args::From(argc, argv)
-                  .Arg(Argument::WithName("file").SetShort('f').SetLong("file"))
-                  .Arg(Argument::WithName("path").SetShort('p').SetLong("path"))
+                  .Arg(Argument::WithName("file")
+                           .SetShort('f')
+                           .SetLong("file")
+                           .Required())
+                  .Arg(Argument::WithName("path")
+                           .SetShort('p')
+                           .SetLong("path")
+                           .Required())
                   .Parse();
 
   if (auto fileValue = args.Get("file")) {
