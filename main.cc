@@ -1,8 +1,8 @@
-#include "cap.h"
+#include "ccap.h"
 
 #include <iostream>
 
-using namespace cap;
+using namespace ccap;
 
 int main(int argc, char const *argv[]) {
   Args args = Args::From(argc, argv)

@@ -1,12 +1,12 @@
-#ifndef CAP_CAP_H_
-#define CAP_CAP_H_
+#ifndef CCAP_CCAP_H_
+#define CCAP_CCAP_H_
 
 #include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace cap {
+namespace ccap {
 
 class Argument {
  private:
@@ -146,6 +146,6 @@ auto Args::Get(std::string arg_name) const -> std::optional<std::string> {
   return std::nullopt;
 }
 
-}  // namespace cap
+}  // namespace ccap
 
-#endif  // CAP_CAP_H
+#endif  // CCAP_CCAP_H
