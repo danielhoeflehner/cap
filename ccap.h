@@ -11,6 +11,7 @@ namespace ccap {
 class Argument {
  private:
   bool required_ = false;
+  bool expects_value_ = false;
   std::string long_;
   std::string name_;
   char short_;
@@ -27,6 +28,8 @@ class Argument {
   auto SetValue(std::string value) -> Argument &;
   auto GetValue() const -> std::optional<std::string>;
   auto GetName() const -> std::string;
+  auto ExpectsValue() -> Argument &;
+  auto IsExpectingValue() const -> bool;
   auto Required() -> Argument &;
   auto IsRequired() const -> bool;
 };
@@ -63,6 +66,13 @@ auto Argument::GetValue() const -> std::optional<std::string> {
 }
 
 auto Argument::GetName() const -> std::string { return name_; }
+
+auto Argument::ExpectsValue() -> Argument & {
+  expects_value_ = true;
+  return *this;
+}
+
+auto Argument::IsExpectingValue() const -> bool { return expects_value_; }
 
 auto Argument::Required() -> Argument & {
   required_ = true;
@@ -109,7 +119,7 @@ auto Args::Parse() -> Args & {
       std::string name = raw_args_[i].substr(2);
       std::string v = raw_args_[i + 1];
       for (auto &arg : args_) {
-        if (arg.GetLong() == name) {
+        if (arg.GetLong() == name && arg.IsExpectingValue()) {
           arg.SetValue(v);
         }
       }
@@ -117,7 +127,7 @@ auto Args::Parse() -> Args & {
       char shortName = raw_args_[i][1];
       std::string v = raw_args_[i + 1];
       for (auto &arg : args_) {
-        if (arg.GetShort() == shortName) {
+        if (arg.GetShort() == shortName && arg.IsExpectingValue()) {
           arg.SetValue(v);
         }
       }
@@ -127,9 +137,10 @@ auto Args::Parse() -> Args & {
   }
 
   for (auto const &arg : args_) {
-    if (arg.IsRequired() && !arg.GetValue().has_value()) {
-      std::cout << "Is required but not set:" << arg.GetName() << ":"
-                << std::endl;
+    if (arg.IsRequired() && arg.IsExpectingValue() &&
+        !arg.GetValue().has_value()) {
+      std::cout << "Is required and expecting a value but not set:"
+                << arg.GetName() << ":" << std::endl;
     }
   }
 
