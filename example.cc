@@ -1,6 +1,6 @@
-#include "ccap.h"
-
 #include <iostream>
+
+#include "ccap.h"
 
 using namespace ccap;
 
