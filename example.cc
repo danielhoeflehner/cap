@@ -1,18 +1,24 @@
-#include "cap.h"
-
 #include <iostream>
 
-using namespace cap;
+#include "ccap.h"
+
+using namespace ccap;
 
 int main(int argc, char const *argv[]) {
   Args args = Args::From(argc, argv)
                   .Arg(Argument::WithName("file")
                            .SetShort('f')
                            .SetLong("file")
+                           .ExpectsValue()
                            .Required())
                   .Arg(Argument::WithName("path")
                            .SetShort('p')
                            .SetLong("path")
+                           .ExpectsValue()
+                           .Required())
+                  .Arg(Argument::WithName("this")
+                           .SetShort('t')
+                           .SetLong("this")
                            .Required())
                   .Parse();
 
@@ -22,6 +28,10 @@ int main(int argc, char const *argv[]) {
 
   if (auto pathValue = args.Get("path")) {
     std::cout << pathValue.value() << std::endl;
+  }
+
+  if (args.Get("this")) {
+    std::cout << "This is set...\n";
   }
 
   return 0;

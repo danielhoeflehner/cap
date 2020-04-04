@@ -1,16 +1,18 @@
-#ifndef CAP_CAP_H_
-#define CAP_CAP_H_
+#ifndef CCAP_CCAP_H_
+#define CCAP_CCAP_H_
 
 #include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace cap {
+namespace ccap {
 
-class Argument {
+class Argument
+{
  private:
   bool required_ = false;
+  bool expects_value_ = false;
   std::string long_;
   std::string name_;
   char short_;
@@ -27,34 +29,49 @@ class Argument {
   auto SetValue(std::string value) -> Argument &;
   auto GetValue() const -> std::optional<std::string>;
   auto GetName() const -> std::string;
+  auto ExpectsValue() -> Argument &;
+  auto IsExpectingValue() const -> bool;
   auto Required() -> Argument &;
   auto IsRequired() const -> bool;
 };
 
 Argument::Argument(std::string name) : name_(name){};
 
-auto Argument::WithName(std::string name) -> Argument { return Argument(name); }
+auto Argument::WithName(std::string name) -> Argument
+{
+  return Argument(name);
+}
 
-auto Argument::GetShort() const -> char { return short_; }
+auto Argument::GetShort() const -> char
+{
+  return short_;
+}
 
-auto Argument::SetShort(char s) -> Argument & {
+auto Argument::SetShort(char s) -> Argument &
+{
   short_ = s;
   return *this;
 }
 
-auto Argument::GetLong() const -> std::string { return long_; }
+auto Argument::GetLong() const -> std::string
+{
+  return long_;
+}
 
-auto Argument::SetLong(std::string l) -> Argument & {
+auto Argument::SetLong(std::string l) -> Argument &
+{
   long_ = l;
   return *this;
 }
 
-auto Argument::SetValue(std::string value) -> Argument & {
+auto Argument::SetValue(std::string value) -> Argument &
+{
   value_ = value;
   return *this;
 }
 
-auto Argument::GetValue() const -> std::optional<std::string> {
+auto Argument::GetValue() const -> std::optional<std::string>
+{
   if (value_.size() > 0) {
     return value_;
   }
@@ -62,16 +79,35 @@ auto Argument::GetValue() const -> std::optional<std::string> {
   return std::nullopt;
 }
 
-auto Argument::GetName() const -> std::string { return name_; }
+auto Argument::GetName() const -> std::string
+{
+  return name_;
+}
 
-auto Argument::Required() -> Argument & {
+auto Argument::ExpectsValue() -> Argument &
+{
+  expects_value_ = true;
+  return *this;
+}
+
+auto Argument::IsExpectingValue() const -> bool
+{
+  return expects_value_;
+}
+
+auto Argument::Required() -> Argument &
+{
   required_ = true;
   return *this;
 }
 
-auto Argument::IsRequired() const -> bool { return required_; }
+auto Argument::IsRequired() const -> bool
+{
+  return required_;
+}
 
-class Args {
+class Args
+{
  private:
   std::vector<std::string> raw_args_;
   std::vector<Argument> args_;
@@ -86,7 +122,8 @@ class Args {
   auto Get(std::string arg_name) const -> std::optional<std::string>;
 };
 
-Args::Args(int argc, char const *argv[]) {
+Args::Args(int argc, char const *argv[])
+{
   for (int i = 1; i < argc; ++i) {
     raw_args_.push_back(argv[i]);
   }
@@ -94,22 +131,25 @@ Args::Args(int argc, char const *argv[]) {
   num_args_ = argc - 1;
 }
 
-auto Args::From(int argc, char const *argv[]) -> Args {
+auto Args::From(int argc, char const *argv[]) -> Args
+{
   return Args(argc, argv);
 }
 
-auto Args::Arg(Argument item) -> Args & {
+auto Args::Arg(Argument item) -> Args &
+{
   args_.push_back(item);
   return *this;
 }
 
-auto Args::Parse() -> Args & {
+auto Args::Parse() -> Args &
+{
   for (int i = 0; i < num_args_; ++i) {
     if (raw_args_[i].starts_with("--")) {
       std::string name = raw_args_[i].substr(2);
       std::string v = raw_args_[i + 1];
       for (auto &arg : args_) {
-        if (arg.GetLong() == name) {
+        if (arg.GetLong() == name && arg.IsExpectingValue()) {
           arg.SetValue(v);
         }
       }
@@ -117,7 +157,7 @@ auto Args::Parse() -> Args & {
       char shortName = raw_args_[i][1];
       std::string v = raw_args_[i + 1];
       for (auto &arg : args_) {
-        if (arg.GetShort() == shortName) {
+        if (arg.GetShort() == shortName && arg.IsExpectingValue()) {
           arg.SetValue(v);
         }
       }
@@ -127,16 +167,18 @@ auto Args::Parse() -> Args & {
   }
 
   for (auto const &arg : args_) {
-    if (arg.IsRequired() && !arg.GetValue().has_value()) {
-      std::cout << "Is required but not set:" << arg.GetName() << ":"
-                << std::endl;
+    if (arg.IsRequired() && arg.IsExpectingValue() &&
+        !arg.GetValue().has_value()) {
+      std::cout << "Is required and expecting a value but not set:"
+                << arg.GetName() << ":" << std::endl;
     }
   }
 
   return *this;
 }
 
-auto Args::Get(std::string arg_name) const -> std::optional<std::string> {
+auto Args::Get(std::string arg_name) const -> std::optional<std::string>
+{
   for (const auto &argument : args_) {
     if (argument.GetName() == arg_name) {
       return argument.GetValue();
@@ -146,6 +188,6 @@ auto Args::Get(std::string arg_name) const -> std::optional<std::string> {
   return std::nullopt;
 }
 
-}  // namespace cap
+}  // namespace ccap
 
-#endif  // CAP_CAP_H
+#endif  // CCAP_CCAP_H
