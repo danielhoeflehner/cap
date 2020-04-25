@@ -20,7 +20,7 @@ class Argument
 
  public:
   Argument() = delete;
-  Argument(std::string name);
+  explicit Argument(std::string name);
   static auto WithName(std::string name) -> Argument;
   auto GetShort() const -> char;
   auto SetShort(char s) -> Argument &;
