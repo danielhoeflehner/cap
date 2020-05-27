@@ -22,13 +22,13 @@ class Argument
   Argument() = delete;
   explicit Argument(std::string name);
   static auto WithName(std::string name) -> Argument;
+  auto GetName() const -> std::string;
   auto GetShort() const -> char;
   auto SetShort(char s) -> Argument &;
   auto GetLong() const -> std::string;
   auto SetLong(std::string l) -> Argument &;
-  auto SetValue(std::string value) -> Argument &;
   auto GetValue() const -> std::optional<std::string>;
-  auto GetName() const -> std::string;
+  auto SetValue(std::string value) -> Argument &;
   auto ExpectsValue() -> Argument &;
   auto IsExpectingValue() const -> bool;
   auto Required() -> Argument &;
@@ -40,6 +40,11 @@ Argument::Argument(std::string name) : name_(name){};
 auto Argument::WithName(std::string name) -> Argument
 {
   return Argument(name);
+}
+
+auto Argument::GetName() const -> std::string
+{
+  return name_;
 }
 
 auto Argument::GetShort() const -> char
@@ -79,11 +84,6 @@ auto Argument::GetValue() const -> std::optional<std::string>
   return std::nullopt;
 }
 
-auto Argument::GetName() const -> std::string
-{
-  return name_;
-}
-
 auto Argument::ExpectsValue() -> Argument &
 {
   expects_value_ = true;
@@ -106,20 +106,38 @@ auto Argument::IsRequired() const -> bool
   return required_;
 }
 
+// This class takes and stores the raw arguments as well as the
+// argument definitions. The class can be initialized in two
+// ways (this is more a decision on taste):
+//    auto args = Args::from(argc, argv);
+//    auto args = Args(argc, argv);
 class Args
 {
  private:
+  // The raw arguments from the command line
   std::vector<std::string> raw_args_;
+  // The argument definitions
   std::vector<Argument> args_;
   int num_args_;
 
  public:
+  // The count and the arguments are needed in the constructor
   Args() = delete;
-  Args(int argc, char const *argv[]);
+  explicit Args(int argc, char const *argv[]);
   static auto From(int argc, char const *argv[]) -> Args;
+
+  // Adds an argument definition
   auto Arg(Argument item) -> Args &;
+
+  // Parses and validates the given arguments
+  // and updates the argument definitions.
   auto Parse() -> Args &;
+
+  // Gets the value of an argument
   auto Get(std::string arg_name) const -> std::optional<std::string>;
+
+  auto GetRawArgs() const -> const std::vector<std::string> &;
+  auto GetRawArgsCount() const -> int;
 };
 
 Args::Args(int argc, char const *argv[])
@@ -128,12 +146,22 @@ Args::Args(int argc, char const *argv[])
     raw_args_.push_back(argv[i]);
   }
 
-  num_args_ = argc - 1;
+  num_args_ = argc == 0 ? argc : argc - 1;
 }
 
 auto Args::From(int argc, char const *argv[]) -> Args
 {
   return Args(argc, argv);
+}
+
+auto Args::GetRawArgs() const -> const std::vector<std::string> &
+{
+  return raw_args_;
+}
+
+auto Args::GetRawArgsCount() const -> int
+{
+  return num_args_;
 }
 
 auto Args::Arg(Argument item) -> Args &
