@@ -53,19 +53,86 @@ TEST(ArgsTest, Initialization)
 
   {
     Args args = Args(argc, argv);
-    EXPECT_EQ(1, args.GetRawArgsCount());
-    EXPECT_EQ("argument1", args.GetRawArgs().at(0));
+    args.Parse();
+
+    EXPECT_EQ(std::nullopt, args.Get("argument1"));
+    EXPECT_EQ(std::nullopt, args.Get("does_not_exist"));
   }
 
   {
     Args args = Args::From(argc, argv);
-    EXPECT_EQ(1, args.GetRawArgsCount());
-    EXPECT_EQ("argument1", args.GetRawArgs().at(0));
+    args.Parse();
+
+    EXPECT_EQ(std::nullopt, args.Get("argument1"));
+    EXPECT_EQ(std::nullopt, args.Get("does_not_exist"));
+  }
+}
+
+TEST(ArgsTest, ItShouldTakeAnRequiredOption)
+{
+  {
+    const char* argv[] = {"ccap", "-n", "John"};
+
+    Args args = Args(3, argv);
+    args.Arg(
+        Argument::WithName("name").SetShort('n').Required().ExpectsValue());
+    args.Parse();
+
+    EXPECT_EQ("John", args.Get("name").value());
   }
 
   {
-    Args args = Args(0, argv);
-    EXPECT_EQ(0, args.GetRawArgsCount());
-    EXPECT_THROW(args.GetRawArgs().at(0), std::out_of_range);
+    const char* argv[] = {"ccap", "--name", "John"};
+
+    Args args = Args(3, argv);
+    args.Arg(
+        Argument::WithName("name").SetLong("name").Required().ExpectsValue());
+    args.Parse();
+
+    EXPECT_EQ("John", args.Get("name").value());
+  }
+
+  {
+    const char* argv[] = {"ccap"};
+
+    Args args = Args(1, argv);
+    args.Arg(
+        Argument::WithName("name").SetShort('n').Required().ExpectsValue());
+    EXPECT_EXIT(args.Parse(), ::testing::ExitedWithCode(EXIT_FAILURE), "");
+  }
+}
+
+TEST(ArgsTest, ItShouldTakeAnOptionalOption)
+{
+  {
+    const char* argv[] = {"ccap", "-n", "John"};
+
+    Args args = Args(3, argv);
+    args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
+    args.Parse();
+
+    EXPECT_TRUE(args.Get("name").has_value());
+    EXPECT_EQ("John", args.Get("name").value());
+  }
+
+  {
+    const char* argv[] = {"ccap", "--name", "John"};
+
+    Args args = Args(3, argv);
+    args.Arg(Argument::WithName("name").SetLong("name").ExpectsValue());
+    args.Parse();
+
+    EXPECT_TRUE(args.Get("name").has_value());
+    EXPECT_EQ("John", args.Get("name").value());
+  }
+
+  {
+    const char* argv[] = {"ccap"};
+
+    Args args = Args(1, argv);
+    args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
+    args.Parse();
+
+    EXPECT_FALSE(args.Get("name").has_value());
   }
 }

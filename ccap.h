@@ -8,6 +8,9 @@
 
 namespace ccap {
 
+//
+// Defines an argument.
+//
 class Argument
 {
  private:
@@ -19,9 +22,11 @@ class Argument
   std::string value_;
 
  public:
+  // An argument must be initialized with a name
   Argument() = delete;
   explicit Argument(std::string name);
   static auto WithName(std::string name) -> Argument;
+
   auto GetName() const -> std::string;
   auto GetShort() const -> char;
   auto SetShort(char s) -> Argument &;
@@ -106,6 +111,12 @@ auto Argument::IsRequired() const -> bool
   return required_;
 }
 
+enum class TerminationType
+{
+  Exit,
+  Exception
+};
+
 // This class takes and stores the raw arguments as well as the
 // argument definitions. The class can be initialized in two
 // ways (this is more a decision on taste):
@@ -114,10 +125,16 @@ auto Argument::IsRequired() const -> bool
 class Args
 {
  private:
+  // Defines how the program should be terminated
+  // when an error ocurres.
+  TerminationType terminateBy_ = TerminationType::Exit;
+
   // The raw arguments from the command line
   std::vector<std::string> raw_args_;
+
   // The argument definitions
   std::vector<Argument> args_;
+
   int num_args_;
 
  public:
@@ -129,17 +146,23 @@ class Args
   // Adds an argument definition
   auto Arg(Argument item) -> Args &;
 
+  // Gets the value of an argument
+  auto Get(std::string arg_name) const -> std::optional<std::string>;
+
   // Parses and validates the given arguments
   // and updates the argument definitions.
   auto Parse() -> Args &;
 
-  // Gets the value of an argument
-  auto Get(std::string arg_name) const -> std::optional<std::string>;
+  // Sets the prefered termination type
+  auto SetTerminationType(TerminationType type) -> void;
 
-  auto GetRawArgs() const -> const std::vector<std::string> &;
-  auto GetRawArgsCount() const -> int;
+  auto Terminate(const Argument &arg) -> void;
 };
 
+//
+// Constructor
+// Initialize the class with the raw arguments.
+//
 Args::Args(int argc, char const *argv[])
 {
   for (int i = 1; i < argc; ++i) {
@@ -149,27 +172,40 @@ Args::Args(int argc, char const *argv[])
   num_args_ = argc == 0 ? argc : argc - 1;
 }
 
+//
+// Initialize an Args class with the raw arguments.
+//
 auto Args::From(int argc, char const *argv[]) -> Args
 {
   return Args(argc, argv);
 }
 
-auto Args::GetRawArgs() const -> const std::vector<std::string> &
-{
-  return raw_args_;
-}
-
-auto Args::GetRawArgsCount() const -> int
-{
-  return num_args_;
-}
-
+//
+// Add an argument object.
+//
 auto Args::Arg(Argument item) -> Args &
 {
   args_.push_back(item);
   return *this;
 }
 
+//
+// Get the value of an argument.
+//
+auto Args::Get(std::string arg_name) const -> std::optional<std::string>
+{
+  for (const auto &argument : args_) {
+    if (argument.GetName() == arg_name) {
+      return argument.GetValue();
+    }
+  }
+
+  return std::nullopt;
+}
+
+//
+// Parse the raw arguments and set the according argument objects.
+//
 auto Args::Parse() -> Args &
 {
   for (int i = 0; i < num_args_; ++i) {
@@ -195,25 +231,32 @@ auto Args::Parse() -> Args &
   }
 
   for (auto const &arg : args_) {
-    if (arg.IsRequired() && arg.IsExpectingValue() &&
-        !arg.GetValue().has_value()) {
-      std::cout << "Is required and expecting a value but not set:"
-                << arg.GetName() << ":" << std::endl;
+    if (arg.IsRequired() && !arg.GetValue().has_value()) {
+      Terminate(arg);
     }
   }
 
   return *this;
 }
 
-auto Args::Get(std::string arg_name) const -> std::optional<std::string>
+auto Args::SetTerminationType(TerminationType type) -> void
 {
-  for (const auto &argument : args_) {
-    if (argument.GetName() == arg_name) {
-      return argument.GetValue();
-    }
-  }
+  terminateBy_ = type;
+}
 
-  return std::nullopt;
+//
+// Terminate the program based on the choosen termination type.
+//
+auto Args::Terminate(const Argument &arg) -> void
+{
+  switch (terminateBy_) {
+    case TerminationType::Exit:
+      std::cerr << "Error: Missing required value from argument '"
+                << arg.GetName() << "'\n";
+      exit(EXIT_FAILURE);
+
+    case TerminationType::Exception: throw "Exception";
+  }
 }
 
 }  // namespace ccap
