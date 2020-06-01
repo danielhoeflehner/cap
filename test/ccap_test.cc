@@ -9,6 +9,8 @@ TEST(ArgumentTest, Initialization)
   {
     Argument arg1 = Argument("argument1");
     EXPECT_EQ("argument1", arg1.GetName());
+    EXPECT_TRUE(arg1.IsOption());
+    EXPECT_FALSE(arg1.IsGiven());
   }
 
   {
@@ -134,5 +136,18 @@ TEST(ArgsTest, ItShouldTakeAnOptionalOption)
     args.Parse();
 
     EXPECT_FALSE(args.Get("name").has_value());
+  }
+}
+
+TEST(ArgsTest, ItShouldTakeAFlag)
+{
+  {
+    const char* argv[] = {"ccap", "-v"};
+
+    Args args = Args(2, argv);
+    args.Arg(Argument::WithName("verbose").SetShort('v'));
+    args.Parse();
+
+    EXPECT_TRUE(args.IsGiven("verbose"));
   }
 }

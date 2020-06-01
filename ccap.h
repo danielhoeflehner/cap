@@ -20,6 +20,8 @@ class Argument
   std::string name_;
   char short_;
   std::string value_;
+  bool is_option_ = true;
+  bool is_given_ = false;
 
  public:
   // An argument must be initialized with a name
@@ -27,10 +29,10 @@ class Argument
   explicit Argument(std::string name);
   static auto WithName(std::string name) -> Argument;
 
-  auto GetName() const -> std::string;
+  auto GetName() const -> const std::string &;
   auto GetShort() const -> char;
   auto SetShort(char s) -> Argument &;
-  auto GetLong() const -> std::string;
+  auto GetLong() const -> const std::string &;
   auto SetLong(std::string l) -> Argument &;
   auto GetValue() const -> std::optional<std::string>;
   auto SetValue(std::string value) -> Argument &;
@@ -38,6 +40,10 @@ class Argument
   auto IsExpectingValue() const -> bool;
   auto Required() -> Argument &;
   auto IsRequired() const -> bool;
+
+  auto IsOption() const -> bool;
+  auto IsGiven() const -> bool;
+  auto SetGiven(bool value);
 };
 
 Argument::Argument(std::string name) : name_(name){};
@@ -47,7 +53,7 @@ auto Argument::WithName(std::string name) -> Argument
   return Argument(name);
 }
 
-auto Argument::GetName() const -> std::string
+auto Argument::GetName() const -> const std::string &
 {
   return name_;
 }
@@ -63,7 +69,7 @@ auto Argument::SetShort(char s) -> Argument &
   return *this;
 }
 
-auto Argument::GetLong() const -> std::string
+auto Argument::GetLong() const -> const std::string &
 {
   return long_;
 }
@@ -92,6 +98,11 @@ auto Argument::GetValue() const -> std::optional<std::string>
 auto Argument::ExpectsValue() -> Argument &
 {
   expects_value_ = true;
+
+  // If the arguments expects a value,
+  // it cannot be an optional flag.
+  is_option_ = false;
+
   return *this;
 }
 
@@ -109,6 +120,21 @@ auto Argument::Required() -> Argument &
 auto Argument::IsRequired() const -> bool
 {
   return required_;
+}
+
+auto Argument::IsOption() const -> bool
+{
+  return is_option_;
+}
+
+auto Argument::IsGiven() const -> bool
+{
+  return is_given_;
+}
+
+auto Argument::SetGiven(bool value)
+{
+  is_given_ = value;
 }
 
 enum class TerminationType
@@ -147,7 +173,9 @@ class Args
   auto Arg(Argument item) -> Args &;
 
   // Gets the value of an argument
-  auto Get(std::string arg_name) const -> std::optional<std::string>;
+  auto Get(const std::string &arg_name) const -> std::optional<std::string>;
+
+  auto IsGiven(const std::string &arg_name) const -> bool;
 
   // Parses and validates the given arguments
   // and updates the argument definitions.
@@ -192,7 +220,7 @@ auto Args::Arg(Argument item) -> Args &
 //
 // Get the value of an argument.
 //
-auto Args::Get(std::string arg_name) const -> std::optional<std::string>
+auto Args::Get(const std::string &arg_name) const -> std::optional<std::string>
 {
   for (const auto &argument : args_) {
     if (argument.GetName() == arg_name) {
@@ -201,6 +229,17 @@ auto Args::Get(std::string arg_name) const -> std::optional<std::string>
   }
 
   return std::nullopt;
+}
+
+auto Args::IsGiven(const std::string &arg_name) const -> bool
+{
+  for (const auto &argument : args_) {
+    if (argument.GetName() == arg_name) {
+      return argument.IsOption() && argument.IsGiven();
+    }
+  }
+
+  return false;
 }
 
 //
@@ -219,10 +258,16 @@ auto Args::Parse() -> Args &
       }
     } else if (raw_args_[i].starts_with("-")) {
       char shortName = raw_args_[i][1];
-      std::string v = raw_args_[i + 1];
       for (auto &arg : args_) {
-        if (arg.GetShort() == shortName && arg.IsExpectingValue()) {
-          arg.SetValue(v);
+        if (arg.GetShort() == shortName) {
+          if (arg.IsExpectingValue()) {
+            std::string v = raw_args_[i + 1];
+            arg.SetValue(v);
+          }
+
+          if (arg.IsOption()) {
+            arg.SetGiven(true);
+          }
         }
       }
     } else {
