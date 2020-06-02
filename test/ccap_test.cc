@@ -84,6 +84,17 @@ TEST(ArgsTest, ItShouldTakeAnRequiredOption)
   }
 
   {
+    const char* argv[] = {"ccap", "-n", "      John"};
+
+    Args args = Args(3, argv);
+    args.Arg(
+        Argument::WithName("name").SetShort('n').Required().ExpectsValue());
+    args.Parse();
+
+    EXPECT_EQ("John", args.Get("name").value());
+  }
+
+  {
     const char* argv[] = {"ccap", "--name", "John"};
 
     Args args = Args(3, argv);
@@ -149,5 +160,71 @@ TEST(ArgsTest, ItShouldTakeAFlag)
     args.Parse();
 
     EXPECT_TRUE(args.IsGiven("verbose"));
+  }
+
+  {
+    const char* argv[] = {"ccap", "-v", "-c", "-o"};
+
+    Args args = Args(4, argv);
+    args.Arg(Argument::WithName("verbose").SetShort('v'));
+    args.Arg(Argument::WithName("compile").SetShort('c'));
+    args.Arg(Argument::WithName("output").SetShort('o'));
+    args.Parse();
+
+    EXPECT_TRUE(args.IsGiven("verbose"));
+    EXPECT_TRUE(args.IsGiven("compile"));
+    EXPECT_TRUE(args.IsGiven("output"));
+  }
+
+  {
+    const char* argv[] = {"ccap", "--verbose"};
+
+    Args args = Args(2, argv);
+    args.Arg(Argument::WithName("verbose").SetLong("verbose"));
+    args.Parse();
+
+    EXPECT_TRUE(args.IsGiven("verbose"));
+  }
+
+  {
+    const char* argv[] = {"ccap", "--verbose", "--compile", "--output"};
+
+    Args args = Args(4, argv);
+    args.Arg(Argument::WithName("verbose").SetShort('v').SetLong("verbose"));
+    args.Arg(Argument::WithName("compile").SetShort('c').SetLong("compile"));
+    args.Arg(Argument::WithName("output").SetShort('o').SetLong("output"));
+    args.Parse();
+
+    EXPECT_TRUE(args.IsGiven("verbose"));
+    EXPECT_TRUE(args.IsGiven("compile"));
+    EXPECT_TRUE(args.IsGiven("output"));
+  }
+
+  {
+    const char* argv[] = {"ccap", "-v", "--compile", "-o"};
+
+    Args args = Args(4, argv);
+    args.Arg(Argument::WithName("verbose").SetShort('v').SetLong("verbose"));
+    args.Arg(Argument::WithName("compile").SetShort('c').SetLong("compile"));
+    args.Arg(Argument::WithName("output").SetShort('o').SetLong("output"));
+    args.Parse();
+
+    EXPECT_TRUE(args.IsGiven("verbose"));
+    EXPECT_TRUE(args.IsGiven("compile"));
+    EXPECT_TRUE(args.IsGiven("output"));
+  }
+
+  {
+    const char* argv[] = {"ccap", "-v", "--compile"};
+
+    Args args = Args(3, argv);
+    args.Arg(Argument::WithName("verbose").SetShort('v').SetLong("verbose"));
+    args.Arg(Argument::WithName("compile").SetShort('c').SetLong("compile"));
+    args.Arg(Argument::WithName("output").SetShort('o').SetLong("output"));
+    args.Parse();
+
+    EXPECT_TRUE(args.IsGiven("verbose"));
+    EXPECT_TRUE(args.IsGiven("compile"));
+    EXPECT_FALSE(args.IsGiven("output"));
   }
 }

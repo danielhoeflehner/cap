@@ -172,6 +172,9 @@ class Args
   // Adds an argument definition
   auto Arg(Argument item) -> Args &;
 
+  // auto Find(const std::string &name) const -> std::optional<const Argument
+  // &>;
+
   // Gets the value of an argument
   auto Get(const std::string &arg_name) const -> std::optional<std::string>;
 
@@ -218,6 +221,21 @@ auto Args::Arg(Argument item) -> Args &
 }
 
 //
+// Find argument by name.
+//
+/*auto Args::Find(const std::string &arg_name) const
+    -> std::optional<const Argument &>
+{
+  for (const auto &arg : args_) {
+    if (arg.GetName() == arg_name) {
+      return arg;
+    }
+  }
+
+  return std::nullopt;
+}*/
+
+//
 // Get the value of an argument.
 //
 auto Args::Get(const std::string &arg_name) const -> std::optional<std::string>
@@ -250,10 +268,16 @@ auto Args::Parse() -> Args &
   for (int i = 0; i < num_args_; ++i) {
     if (raw_args_[i].starts_with("--")) {
       std::string name = raw_args_[i].substr(2);
-      std::string v = raw_args_[i + 1];
       for (auto &arg : args_) {
-        if (arg.GetLong() == name && arg.IsExpectingValue()) {
-          arg.SetValue(v);
+        if (arg.GetLong() == name) {
+          if (arg.IsExpectingValue()) {
+            std::string v = raw_args_[i + 1];
+            arg.SetValue(v);
+          }
+
+          if (arg.IsOption()) {
+            arg.SetGiven(true);
+          }
         }
       }
     } else if (raw_args_[i].starts_with("-")) {
