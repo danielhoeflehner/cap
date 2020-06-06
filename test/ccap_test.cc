@@ -95,7 +95,7 @@ TEST(ArgsTest, ItShouldTakeAnRequiredOption)
   }
 
   {
-    const char* argv[] = {"ccap", "--name", "John"};
+    const char* argv[] = {"ccap", "--name", "   John      "};
 
     Args args = Args(3, argv);
     args.Arg(
@@ -226,5 +226,26 @@ TEST(ArgsTest, ItShouldTakeAFlag)
     EXPECT_TRUE(args.IsGiven("verbose"));
     EXPECT_TRUE(args.IsGiven("compile"));
     EXPECT_FALSE(args.IsGiven("output"));
+  }
+}
+
+TEST(HelperFunctions, Trim)
+{
+  {
+    std::string s{"/path/to/file     "};
+    Trim(s);
+    EXPECT_EQ("/path/to/file", s);
+  }
+
+  {
+    std::string s{"      /path/to/file"};
+    Trim(s);
+    EXPECT_EQ("/path/to/file", s);
+  }
+
+  {
+    std::string s{" /path/to/file     "};
+    Trim(s);
+    EXPECT_EQ("/path/to/file", s);
   }
 }

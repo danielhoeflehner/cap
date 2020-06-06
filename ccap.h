@@ -8,6 +8,8 @@
 
 namespace ccap {
 
+static auto Trim(std::string &s) -> void;
+
 //
 // Defines an argument.
 //
@@ -272,6 +274,7 @@ auto Args::Parse() -> Args &
         if (arg.GetLong() == name) {
           if (arg.IsExpectingValue()) {
             std::string v = raw_args_[i + 1];
+            Trim(v);
             arg.SetValue(v);
           }
 
@@ -286,6 +289,7 @@ auto Args::Parse() -> Args &
         if (arg.GetShort() == shortName) {
           if (arg.IsExpectingValue()) {
             std::string v = raw_args_[i + 1];
+            Trim(v);
             arg.SetValue(v);
           }
 
@@ -320,12 +324,30 @@ auto Args::Terminate(const Argument &arg) -> void
 {
   switch (terminateBy_) {
     case TerminationType::Exit:
-      std::cerr << "Error: Missing required value from argument '"
+      std::cerr << "Error: Missing required value for argument '"
                 << arg.GetName() << "'\n";
       exit(EXIT_FAILURE);
 
     case TerminationType::Exception: throw "Exception";
   }
+}
+
+//
+// Helper functions
+//
+
+static auto Trim(std::string &s) -> void
+{
+  // Delete space at the beginning
+  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+            return !std::isspace(ch);
+          }));
+
+  // Delete space at the end
+  s.erase(std::find_if(s.rbegin(), s.rend(),
+                       [](unsigned char ch) { return !std::isspace(ch); })
+              .base(),
+          s.end());
 }
 
 }  // namespace ccap
