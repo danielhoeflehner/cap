@@ -70,6 +70,21 @@ TEST(ArgsTest, Initialization)
   }
 }
 
+TEST(ArgsTest, ItShouldShowHelp)
+{
+  int argc = 2;
+  const char* argv[] = {"program", "--help"};
+
+  {
+    Args args = Args(argc, argv);
+    args.SetAbout("Test Programm")
+        .SetAuthor("Its a me")
+        .SetName("App")
+        .SetVersion("0.0.2")
+        .Parse();
+  }
+}
+
 TEST(ArgsTest, ItShouldTakeAnRequiredOption)
 {
   {
@@ -84,7 +99,7 @@ TEST(ArgsTest, ItShouldTakeAnRequiredOption)
   }
 
   {
-    const char* argv[] = {"ccap", "-n", "      John"};
+    const char* argv[] = {"ccap", "-n", "John"};
 
     Args args = Args(3, argv);
     args.Arg(
@@ -95,7 +110,7 @@ TEST(ArgsTest, ItShouldTakeAnRequiredOption)
   }
 
   {
-    const char* argv[] = {"ccap", "--name", "   John      "};
+    const char* argv[] = {"ccap", "--name", "John"};
 
     Args args = Args(3, argv);
     args.Arg(
@@ -226,26 +241,5 @@ TEST(ArgsTest, ItShouldTakeAFlag)
     EXPECT_TRUE(args.IsGiven("verbose"));
     EXPECT_TRUE(args.IsGiven("compile"));
     EXPECT_FALSE(args.IsGiven("output"));
-  }
-}
-
-TEST(HelperFunctions, Trim)
-{
-  {
-    std::string s{"/path/to/file     "};
-    Trim(s);
-    EXPECT_EQ("/path/to/file", s);
-  }
-
-  {
-    std::string s{"      /path/to/file"};
-    Trim(s);
-    EXPECT_EQ("/path/to/file", s);
-  }
-
-  {
-    std::string s{" /path/to/file     "};
-    Trim(s);
-    EXPECT_EQ("/path/to/file", s);
   }
 }

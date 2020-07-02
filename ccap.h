@@ -8,20 +8,19 @@
 
 namespace ccap {
 
-static auto Trim(std::string &s) -> void;
-
 //
 // Defines an argument.
 //
 class Argument
 {
  private:
-  bool required_ = false;
-  bool expects_value_ = false;
-  std::string long_;
   std::string name_;
+  std::string long_;
   char short_;
   std::string value_;
+
+  bool required_ = false;
+  bool expects_value_ = false;
   bool is_option_ = true;
   bool is_given_ = false;
 
@@ -165,6 +164,11 @@ class Args
 
   int num_args_;
 
+  std::string about_;
+  std::string author_;
+  std::string name_;
+  std::string version_ = "0.0.1";
+
  public:
   // The count and the arguments are needed in the constructor
   Args() = delete;
@@ -173,9 +177,6 @@ class Args
 
   // Adds an argument definition
   auto Arg(Argument item) -> Args &;
-
-  // auto Find(const std::string &name) const -> std::optional<const Argument
-  // &>;
 
   // Gets the value of an argument
   auto Get(const std::string &arg_name) const -> std::optional<std::string>;
@@ -188,6 +189,13 @@ class Args
 
   // Sets the prefered termination type
   auto SetTerminationType(TerminationType type) -> void;
+
+  auto SetAbout(const std::string &version) -> Args &;
+  auto SetAuthor(const std::string &author) -> Args &;
+  auto SetName(const std::string &name) -> Args &;
+  auto SetVersion(const std::string &version) -> Args &;
+
+  auto ShowHelp() -> void;
 
   auto Terminate(const Argument &arg) -> void;
 };
@@ -270,11 +278,14 @@ auto Args::Parse() -> Args &
   for (int i = 0; i < num_args_; ++i) {
     if (raw_args_[i].starts_with("--")) {
       std::string name = raw_args_[i].substr(2);
+      if (name == "help") {
+        ShowHelp();
+      }
+
       for (auto &arg : args_) {
         if (arg.GetLong() == name) {
           if (arg.IsExpectingValue()) {
             std::string v = raw_args_[i + 1];
-            Trim(v);
             arg.SetValue(v);
           }
 
@@ -285,11 +296,14 @@ auto Args::Parse() -> Args &
       }
     } else if (raw_args_[i].starts_with("-")) {
       char shortName = raw_args_[i][1];
+      if (shortName == 'h') {
+        ShowHelp();
+      }
+
       for (auto &arg : args_) {
         if (arg.GetShort() == shortName) {
           if (arg.IsExpectingValue()) {
             std::string v = raw_args_[i + 1];
-            Trim(v);
             arg.SetValue(v);
           }
 
@@ -317,6 +331,36 @@ auto Args::SetTerminationType(TerminationType type) -> void
   terminateBy_ = type;
 }
 
+auto Args::SetAbout(const std::string &about) -> Args &
+{
+  about_ = about;
+  return *this;
+}
+
+auto Args::SetAuthor(const std::string &author) -> Args &
+{
+  author_ = author;
+  return *this;
+}
+
+auto Args::SetName(const std::string &name) -> Args &
+{
+  name_ = name;
+  return *this;
+}
+
+auto Args::SetVersion(const std::string &version) -> Args &
+{
+  version_ = version;
+  return *this;
+}
+
+auto Args::ShowHelp() -> void
+{
+  std::cout << "Help Message\n";
+  exit(0);
+}
+
 //
 // Terminate the program based on the choosen termination type.
 //
@@ -330,24 +374,6 @@ auto Args::Terminate(const Argument &arg) -> void
 
     case TerminationType::Exception: throw "Exception";
   }
-}
-
-//
-// Helper functions
-//
-
-static auto Trim(std::string &s) -> void
-{
-  // Delete space at the beginning
-  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-            return !std::isspace(ch);
-          }));
-
-  // Delete space at the end
-  s.erase(std::find_if(s.rbegin(), s.rend(),
-                       [](unsigned char ch) { return !std::isspace(ch); })
-              .base(),
-          s.end());
 }
 
 }  // namespace ccap
