@@ -2,24 +2,4 @@
 BasedOnStyle: Google
 ---
 Language: Cpp
-AllowShortBlocksOnASingleLine: Empty
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLambdasOnASingleLine: Inline
-BraceWrapping:
-  AfterClass: true
-  AfterControlStatement: MultiLine
-  AfterEnum: true
-  AfterFunction: true
-  AfterStruct: true
-  AfterUnion: true
-BreakBeforeBraces: Custom
-BreakBeforeTernaryOperators: true
-ColumnLimit: 80
-CompactNamespaces: false
-FixNamespaceComments: true
-IndentCaseBlocks: false
-IndentCaseLabels: true
-IndentPPDirectives: AfterHash
 Standard: c++20

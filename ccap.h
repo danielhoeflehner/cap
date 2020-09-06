@@ -9,14 +9,16 @@
 namespace ccap {
 
 //
-// Defines an argument.
+// -- Definitions
 //
-class Argument
-{
+
+enum class TerminationType { Exit, Exception };
+
+class Argument {
  private:
   std::string name_;
   std::string long_;
-  char short_;
+  char short_ = 0;
   std::string value_;
 
   bool required_ = false;
@@ -25,18 +27,17 @@ class Argument
   bool is_given_ = false;
 
  public:
-  // An argument must be initialized with a name
   Argument() = delete;
-  explicit Argument(std::string name);
-  static auto WithName(std::string name) -> Argument;
+  explicit Argument(const std::string &name);
+  static auto WithName(const std::string &name) -> Argument;
 
   auto GetName() const -> const std::string &;
   auto GetShort() const -> char;
   auto SetShort(char s) -> Argument &;
   auto GetLong() const -> const std::string &;
-  auto SetLong(std::string l) -> Argument &;
+  auto SetLong(const std::string &l) -> Argument &;
   auto GetValue() const -> std::optional<std::string>;
-  auto SetValue(std::string value) -> Argument &;
+  auto SetValue(const std::string &value) -> Argument &;
   auto ExpectsValue() -> Argument &;
   auto IsExpectingValue() const -> bool;
   auto Required() -> Argument &;
@@ -47,135 +48,24 @@ class Argument
   auto SetGiven(bool value);
 };
 
-Argument::Argument(std::string name) : name_(name){};
-
-auto Argument::WithName(std::string name) -> Argument
-{
-  return Argument(name);
-}
-
-auto Argument::GetName() const -> const std::string &
-{
-  return name_;
-}
-
-auto Argument::GetShort() const -> char
-{
-  return short_;
-}
-
-auto Argument::SetShort(char s) -> Argument &
-{
-  short_ = s;
-  return *this;
-}
-
-auto Argument::GetLong() const -> const std::string &
-{
-  return long_;
-}
-
-auto Argument::SetLong(std::string l) -> Argument &
-{
-  long_ = l;
-  return *this;
-}
-
-auto Argument::SetValue(std::string value) -> Argument &
-{
-  value_ = value;
-  return *this;
-}
-
-auto Argument::GetValue() const -> std::optional<std::string>
-{
-  if (value_.size() > 0) {
-    return value_;
-  }
-
-  return std::nullopt;
-}
-
-auto Argument::ExpectsValue() -> Argument &
-{
-  expects_value_ = true;
-
-  // If the arguments expects a value,
-  // it cannot be an optional flag.
-  is_option_ = false;
-
-  return *this;
-}
-
-auto Argument::IsExpectingValue() const -> bool
-{
-  return expects_value_;
-}
-
-auto Argument::Required() -> Argument &
-{
-  required_ = true;
-  return *this;
-}
-
-auto Argument::IsRequired() const -> bool
-{
-  return required_;
-}
-
-auto Argument::IsOption() const -> bool
-{
-  return is_option_;
-}
-
-auto Argument::IsGiven() const -> bool
-{
-  return is_given_;
-}
-
-auto Argument::SetGiven(bool value)
-{
-  is_given_ = value;
-}
-
-enum class TerminationType
-{
-  Exit,
-  Exception
-};
-
-// This class takes and stores the raw arguments as well as the
-// argument definitions. The class can be initialized in two
-// ways (this is more a decision on taste):
-//    auto args = Args::from(argc, argv);
-//    auto args = Args(argc, argv);
-class Args
-{
+class Args {
  private:
-  // Defines how the program should be terminated
-  // when an error ocurres.
-  TerminationType terminateBy_ = TerminationType::Exit;
-
-  // The raw arguments from the command line
   std::vector<std::string> raw_args_;
-
-  // The argument definitions
   std::vector<Argument> args_;
-
+  TerminationType terminateBy_ = TerminationType::Exit;
   int num_args_;
-
   std::string about_;
   std::string author_;
   std::string name_;
   std::string version_ = "0.0.1";
 
  public:
-  // The count and the arguments are needed in the constructor
   Args() = delete;
   explicit Args(int argc, char const *argv[]);
+  ~Args(){};
   static auto From(int argc, char const *argv[]) -> Args;
 
-  // Adds an argument definition
+  // Adds an argument
   auto Arg(Argument item) -> Args &;
 
   // Gets the value of an argument
@@ -201,11 +91,82 @@ class Args
 };
 
 //
+// -- Declarations
+//
+
+Argument::Argument(const std::string &name) : name_{name} {};
+
+auto Argument::WithName(const std::string &name) -> Argument {
+  return Argument(name);
+}
+
+auto Argument::GetName() const -> const std::string & { return name_; }
+
+auto Argument::GetShort() const -> char { return short_; }
+
+auto Argument::SetShort(char s) -> Argument & {
+  short_ = s;
+  return *this;
+}
+
+auto Argument::GetLong() const -> const std::string & { return long_; }
+
+auto Argument::SetLong(const std::string &l) -> Argument & {
+  long_ = l;
+
+  // If the short option is not set yet,
+  // make the first char of the long
+  // version the short form.
+  if (!short_) {
+    short_ = long_.at(0);
+  }
+
+  return *this;
+}
+
+auto Argument::SetValue(const std::string &value) -> Argument & {
+  value_ = value;
+  return *this;
+}
+
+auto Argument::GetValue() const -> std::optional<std::string> {
+  if (value_.size() > 0) {
+    return value_;
+  }
+
+  return std::nullopt;
+}
+
+auto Argument::ExpectsValue() -> Argument & {
+  expects_value_ = true;
+
+  // If the arguments expects a value,
+  // it cannot be an optional flag.
+  is_option_ = false;
+
+  return *this;
+}
+
+auto Argument::IsExpectingValue() const -> bool { return expects_value_; }
+
+auto Argument::Required() -> Argument & {
+  required_ = true;
+  return *this;
+}
+
+auto Argument::IsRequired() const -> bool { return required_; }
+
+auto Argument::IsOption() const -> bool { return is_option_; }
+
+auto Argument::IsGiven() const -> bool { return is_given_; }
+
+auto Argument::SetGiven(bool value) { is_given_ = value; }
+
+//
 // Constructor
 // Initialize the class with the raw arguments.
 //
-Args::Args(int argc, char const *argv[])
-{
+Args::Args(int argc, char const *argv[]) {
   for (int i = 1; i < argc; ++i) {
     raw_args_.push_back(argv[i]);
   }
@@ -216,16 +177,14 @@ Args::Args(int argc, char const *argv[])
 //
 // Initialize an Args class with the raw arguments.
 //
-auto Args::From(int argc, char const *argv[]) -> Args
-{
+auto Args::From(int argc, char const *argv[]) -> Args {
   return Args(argc, argv);
 }
 
 //
 // Add an argument object.
 //
-auto Args::Arg(Argument item) -> Args &
-{
+auto Args::Arg(Argument item) -> Args & {
   args_.push_back(item);
   return *this;
 }
@@ -248,8 +207,8 @@ auto Args::Arg(Argument item) -> Args &
 //
 // Get the value of an argument.
 //
-auto Args::Get(const std::string &arg_name) const -> std::optional<std::string>
-{
+auto Args::Get(const std::string &arg_name) const
+    -> std::optional<std::string> {
   for (const auto &argument : args_) {
     if (argument.GetName() == arg_name) {
       return argument.GetValue();
@@ -259,8 +218,7 @@ auto Args::Get(const std::string &arg_name) const -> std::optional<std::string>
   return std::nullopt;
 }
 
-auto Args::IsGiven(const std::string &arg_name) const -> bool
-{
+auto Args::IsGiven(const std::string &arg_name) const -> bool {
   for (const auto &argument : args_) {
     if (argument.GetName() == arg_name) {
       return argument.IsOption() && argument.IsGiven();
@@ -273,8 +231,7 @@ auto Args::IsGiven(const std::string &arg_name) const -> bool
 //
 // Parse the raw arguments and set the according argument objects.
 //
-auto Args::Parse() -> Args &
-{
+auto Args::Parse() -> Args & {
   for (int i = 0; i < num_args_; ++i) {
     if (raw_args_[i].starts_with("--")) {
       std::string name = raw_args_[i].substr(2);
@@ -326,37 +283,31 @@ auto Args::Parse() -> Args &
   return *this;
 }
 
-auto Args::SetTerminationType(TerminationType type) -> void
-{
+auto Args::SetTerminationType(TerminationType type) -> void {
   terminateBy_ = type;
 }
 
-auto Args::SetAbout(const std::string &about) -> Args &
-{
+auto Args::SetAbout(const std::string &about) -> Args & {
   about_ = about;
   return *this;
 }
 
-auto Args::SetAuthor(const std::string &author) -> Args &
-{
+auto Args::SetAuthor(const std::string &author) -> Args & {
   author_ = author;
   return *this;
 }
 
-auto Args::SetName(const std::string &name) -> Args &
-{
+auto Args::SetName(const std::string &name) -> Args & {
   name_ = name;
   return *this;
 }
 
-auto Args::SetVersion(const std::string &version) -> Args &
-{
+auto Args::SetVersion(const std::string &version) -> Args & {
   version_ = version;
   return *this;
 }
 
-auto Args::ShowHelp() -> void
-{
+auto Args::ShowHelp() -> void {
   std::cout << "Help Message\n";
   exit(0);
 }
@@ -364,15 +315,15 @@ auto Args::ShowHelp() -> void
 //
 // Terminate the program based on the choosen termination type.
 //
-auto Args::Terminate(const Argument &arg) -> void
-{
+auto Args::Terminate(const Argument &arg) -> void {
   switch (terminateBy_) {
     case TerminationType::Exit:
       std::cerr << "Error: Missing required value for argument '"
                 << arg.GetName() << "'\n";
       exit(EXIT_FAILURE);
 
-    case TerminationType::Exception: throw "Exception";
+    case TerminationType::Exception:
+      throw "Exception";
   }
 }
 
