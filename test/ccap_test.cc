@@ -96,14 +96,12 @@ TEST(ArgsTest, ItShouldTakeAnRequiredOption) {
   }
 
   {
-    const char* argv[] = {"ccap", "-n", "John"};
+    const char* argv[] = {"ccap", "--name", "John"};
 
     Args args = Args(3, argv);
     args.Arg(
         Argument::WithName("name").SetShort('n').Required().ExpectsValue());
-    args.Parse();
-
-    EXPECT_EQ("John", args.Get("name").value());
+    EXPECT_EXIT(args.Parse(), ::testing::ExitedWithCode(EXIT_FAILURE), "");
   }
 
   {
@@ -149,29 +147,14 @@ TEST(ArgsTest, GetValueWithLongOption) {
   EXPECT_EQ("John", args.Get("name").value());
 }
 
-TEST(ArgsTest, GetValueWithLongOptionButShortOptionGiven) {
+TEST(ArgsTest, GetNoValueWithLongOptionButShortOptionGiven) {
   const char* argv[] = {"ccap", "-n", "John"};
 
   Args args = Args(3, argv);
   args.Arg(Argument::WithName("name").SetLong("name").ExpectsValue());
-  args.Parse();
-
-  EXPECT_TRUE(args.Get("name").has_value());
-  EXPECT_EQ("John", args.Get("name").value());
-}
-
-TEST(ArgsTest,
-     GetValueWithLongOptionButShortOptionGivenWhichIsTakenByOtherArgument) {
-  const char* argv[] = {"ccap", "-n", "John"};
-
-  Args args = Args(3, argv);
-  args.Arg(Argument::WithName("name").SetLong("name").ExpectsValue());
-  args.Arg(Argument::WithName("nothing").SetShort('n').ExpectsValue());
   args.Parse();
 
   EXPECT_FALSE(args.Get("name").has_value());
-  EXPECT_TRUE(args.Get("nothing").has_value());
-  EXPECT_EQ("John", args.Get("nothing").value());
 }
 
 TEST(ArgsTest, GetNoValueWhenNoValueIsGiven) {

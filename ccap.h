@@ -15,17 +15,6 @@ namespace ccap {
 enum class TerminationType { Exit, Exception };
 
 class Argument {
- private:
-  std::string name_;
-  std::string long_;
-  char short_ = 0;
-  std::string value_;
-
-  bool required_ = false;
-  bool expects_value_ = false;
-  bool is_option_ = true;
-  bool is_given_ = false;
-
  public:
   Argument() = delete;
   explicit Argument(const std::string &name);
@@ -46,23 +35,25 @@ class Argument {
   auto IsOption() const -> bool;
   auto IsGiven() const -> bool;
   auto SetGiven(bool value);
+
+ private:
+  std::string name_;
+  std::string long_;
+  char short_ = 0;
+  std::string value_;
+
+  bool required_ = false;
+  bool expects_value_ = false;
+  bool is_option_ = true;
+  bool is_given_ = false;
 };
 
 class Args {
- private:
-  std::vector<std::string> raw_args_;
-  std::vector<Argument> args_;
-  TerminationType terminateBy_ = TerminationType::Exit;
-  int num_args_;
-  std::string about_;
-  std::string author_;
-  std::string name_;
-  std::string version_ = "0.0.1";
-
  public:
   Args() = delete;
   explicit Args(int argc, char const *argv[]);
   ~Args(){};
+
   static auto From(int argc, char const *argv[]) -> Args;
 
   // Adds an argument
@@ -88,6 +79,16 @@ class Args {
   auto ShowHelp() -> void;
 
   auto Terminate(const Argument &arg) -> void;
+
+ private:
+  std::vector<std::string> raw_args_;
+  std::vector<Argument> args_;
+  TerminationType terminateBy_ = TerminationType::Exit;
+  int num_args_;
+  std::string about_;
+  std::string author_;
+  std::string name_;
+  std::string version_ = "0.0.1";
 };
 
 //
@@ -113,14 +114,6 @@ auto Argument::GetLong() const -> const std::string & { return long_; }
 
 auto Argument::SetLong(const std::string &l) -> Argument & {
   long_ = l;
-
-  // If the short option is not set yet,
-  // make the first char of the long
-  // version the short form.
-  if (!short_) {
-    short_ = long_.at(0);
-  }
-
   return *this;
 }
 
@@ -175,7 +168,7 @@ Args::Args(int argc, char const *argv[]) {
 }
 
 //
-// Initialize an Args class with the raw arguments.
+// Create an Args instance with the raw arguments.
 //
 auto Args::From(int argc, char const *argv[]) -> Args {
   return Args(argc, argv);
