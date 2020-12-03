@@ -167,6 +167,26 @@ TEST(ArgsTest, GetNoValueWhenNoValueIsGiven) {
   EXPECT_FALSE(args.Get("name").has_value());
 }
 
+TEST(ArgsTest, GetNoValueWhenOptionIsNotProperlyGiven) {
+  const char* argv[] = {"ccap", "-"};
+
+  Args args = Args(2, argv);
+  args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
+  args.Parse();
+
+  EXPECT_FALSE(args.Get("name").has_value());
+}
+
+TEST(ArgsTest, GetNoValueWhenOptionIsGivenButNoValue) {
+  const char* argv[] = {"ccap", "-n"};
+
+  Args args = Args(2, argv);
+  args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
+  args.Parse();
+
+  EXPECT_FALSE(args.Get("name").has_value());
+}
+
 TEST(ArgsTest, ItShouldTakeAFlag) {
   {
     const char* argv[] = {"ccap", "-v"};

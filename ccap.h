@@ -89,6 +89,9 @@ class Args {
   std::string author_;
   std::string name_;
   std::string version_ = "0.0.1";
+
+  auto ReadLongArg(int raw_arg_index) -> void;
+  auto ReadShortArg(int raw_arg_index) -> void;
 };
 
 //
@@ -155,11 +158,9 @@ auto Argument::IsGiven() const -> bool { return is_given_; }
 
 auto Argument::SetGiven(bool value) { is_given_ = value; }
 
-//
-// Constructor
 // Initialize the class with the raw arguments.
-//
 Args::Args(int argc, char const *argv[]) {
+  // Start at 1 because we don't need the program name
   for (int i = 1; i < argc; ++i) {
     raw_args_.push_back(argv[i]);
   }
@@ -167,39 +168,18 @@ Args::Args(int argc, char const *argv[]) {
   num_args_ = argc == 0 ? argc : argc - 1;
 }
 
-//
 // Create an Args instance with the raw arguments.
-//
 auto Args::From(int argc, char const *argv[]) -> Args {
   return Args(argc, argv);
 }
 
-//
-// Add an argument object.
-//
+// Add an argument instance.
 auto Args::Arg(Argument item) -> Args & {
   args_.push_back(item);
   return *this;
 }
 
-//
-// Find argument by name.
-//
-/*auto Args::Find(const std::string &arg_name) const
-    -> std::optional<const Argument &>
-{
-  for (const auto &arg : args_) {
-    if (arg.GetName() == arg_name) {
-      return arg;
-    }
-  }
-
-  return std::nullopt;
-}*/
-
-//
 // Get the value of an argument.
-//
 auto Args::Get(const std::string &arg_name) const
     -> std::optional<std::string> {
   for (const auto &argument : args_) {
@@ -211,6 +191,7 @@ auto Args::Get(const std::string &arg_name) const
   return std::nullopt;
 }
 
+// Check if the option arg is given.
 auto Args::IsGiven(const std::string &arg_name) const -> bool {
   for (const auto &argument : args_) {
     if (argument.GetName() == arg_name) {
@@ -221,52 +202,20 @@ auto Args::IsGiven(const std::string &arg_name) const -> bool {
   return false;
 }
 
-//
 // Parse the raw arguments and set the according argument objects.
-//
 auto Args::Parse() -> Args & {
   for (int i = 0; i < num_args_; ++i) {
     if (raw_args_[i].starts_with("--")) {
-      std::string name = raw_args_[i].substr(2);
-      if (name == "help") {
-        ShowHelp();
-      }
-
-      for (auto &arg : args_) {
-        if (arg.GetLong() == name) {
-          if (arg.IsExpectingValue()) {
-            std::string v = raw_args_[i + 1];
-            arg.SetValue(v);
-          }
-
-          if (arg.IsOption()) {
-            arg.SetGiven(true);
-          }
-        }
-      }
+      ReadLongArg(i);
     } else if (raw_args_[i].starts_with("-")) {
-      char shortName = raw_args_[i][1];
-      if (shortName == 'h') {
-        ShowHelp();
-      }
-
-      for (auto &arg : args_) {
-        if (arg.GetShort() == shortName) {
-          if (arg.IsExpectingValue()) {
-            std::string v = raw_args_[i + 1];
-            arg.SetValue(v);
-          }
-
-          if (arg.IsOption()) {
-            arg.SetGiven(true);
-          }
-        }
-      }
+      ReadShortArg(i);
     } else {
       // args_[i].SetValue(raw_args_[i]);
     }
   }
 
+  // After parsing the raw arguments we need to check that
+  // all args that are marked as 'required' do have values.
   for (auto const &arg : args_) {
     if (arg.IsRequired() && !arg.GetValue().has_value()) {
       Terminate(arg);
@@ -274,6 +223,67 @@ auto Args::Parse() -> Args & {
   }
 
   return *this;
+}
+
+auto Args::ReadLongArg(int raw_arg_index) -> void {
+  // To get the name we "cut" away the two '-'
+  // e.g.: --name => name
+  std::string name = raw_args_[raw_arg_index].substr(2);
+  if (name.length() == 0) {
+    return;
+  }
+
+  if (name == "help") {
+    ShowHelp();
+  }
+
+  // Find the arg with the given name
+  for (auto &arg : args_) {
+    if (arg.GetLong() == name) {
+      // If the arg expects an value we take the value after
+      // the arg name as that value.
+      if (arg.IsExpectingValue()) {
+        std::string v = raw_args_[raw_arg_index + 1];
+        arg.SetValue(v);
+      }
+
+      // If the arg is an option we
+      // mark the arg to be given.
+      if (arg.IsOption()) {
+        arg.SetGiven(true);
+      }
+    }
+  }
+}
+
+auto Args::ReadShortArg(int raw_arg_index) -> void {
+  char shortName = raw_args_[raw_arg_index][1];
+  // Retrun when after the '-' nothing is provided
+  if (shortName == 0) {
+    return;
+  }
+
+  if (shortName == 'h') {
+    ShowHelp();
+  }
+
+  for (auto &arg : args_) {
+    if (arg.GetShort() == shortName) {
+      if (arg.IsExpectingValue()) {
+        // Return when no value is provided
+        if (raw_args_.size() <= raw_arg_index + 1) {
+          return;
+        }
+
+        std::string v = raw_args_[raw_arg_index + 1];
+        arg.SetValue(v);
+      }
+
+      if (arg.IsOption()) {
+        arg.SetGiven(true);
+      }
+    }
+  }
 }
 
 auto Args::SetTerminationType(TerminationType type) -> void {
@@ -301,13 +311,11 @@ auto Args::SetVersion(const std::string &version) -> Args & {
 }
 
 auto Args::ShowHelp() -> void {
-  std::cout << "Help Message\n";
+  std::cout << "TODO: Help Message\n";
   exit(0);
 }
 
-//
 // Terminate the program based on the choosen termination type.
-//
 auto Args::Terminate(const Argument &arg) -> void {
   switch (terminateBy_) {
     case TerminationType::Exit:
