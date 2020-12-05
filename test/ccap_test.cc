@@ -4,58 +4,62 @@
 
 using namespace ccap;
 
-TEST(ArgumentTest, Initialization) {
-  {
-    Argument arg1 = Argument("argument1");
-    EXPECT_EQ("argument1", arg1.GetName());
-    EXPECT_TRUE(arg1.IsOption());
-    EXPECT_FALSE(arg1.IsGiven());
-  }
+TEST(FlagTest, DefaultsWithConstructor) {
+  Flag f = Flag("flag");
+  EXPECT_EQ("flag", f.GetName());
+  EXPECT_EQ('f', f.GetShort());
+  EXPECT_EQ("flag", f.GetLong());
+  EXPECT_TRUE(f.IsOption());
+  EXPECT_FALSE(f.IsGiven());
+}
 
-  {
-    Argument arg2 = Argument::WithName("argument2");
-    EXPECT_EQ("argument2", arg2.GetName());
-  }
+TEST(FlagTest, DefaultsFromStatic) {
+  Flag f = Flag::WithName("name");
+  EXPECT_EQ("name", f.GetName());
+  EXPECT_EQ('n', f.GetShort());
+  EXPECT_EQ("name", f.GetLong());
+  EXPECT_TRUE(f.IsOption());
+  EXPECT_FALSE(f.IsGiven());
+}
 
-  {
-    Argument arg = Argument("argument1");
-    arg.SetShort('t');
-    EXPECT_EQ('t', arg.GetShort());
-  }
+TEST(FlagTest, InitWithSpecificShort) {
+  Flag f = Flag("Flag1");
+  f.SetShort('t');
+  EXPECT_EQ('t', f.GetShort());
+}
 
-  {
-    Argument arg = Argument("argument1");
-    arg.SetLong("test");
-    EXPECT_EQ("test", arg.GetLong());
-  }
+TEST(FlagTest, InitWithSpecificLong) {
+  Flag f = Flag("Flag1");
+  f.SetLong("test");
+  EXPECT_EQ("test", f.GetLong());
+}
 
-  {
-    Argument arg = Argument("argument");
-    arg.SetValue("test_value");
-    EXPECT_EQ("test_value", arg.GetValue());
-  }
+TEST(FlagTest, InitWithDefaultValue) {
+  Flag f = Flag("Flag");
+  f.SetValue("test_value");
+  EXPECT_EQ("test_value", f.GetValue());
+}
 
-  {
-    Argument arg = Argument("argument");
-    EXPECT_FALSE(arg.IsExpectingValue());
-    EXPECT_FALSE(arg.IsRequired());
+TEST(FlagTest, ExpectsAndRequired) {
+  Flag f = Flag("Flag");
+  EXPECT_FALSE(f.IsExpectingValue());
+  EXPECT_FALSE(f.IsRequired());
 
-    arg.ExpectsValue();
-    arg.Required();
-    EXPECT_TRUE(arg.IsExpectingValue());
-    EXPECT_TRUE(arg.IsRequired());
-  }
+  f.ExpectsValue();
+  f.Required();
+  EXPECT_TRUE(f.IsExpectingValue());
+  EXPECT_TRUE(f.IsRequired());
 }
 
 TEST(ArgsTest, Initialization) {
   int argc = 2;
-  const char* argv[] = {"program", "argument1"};
+  const char* argv[] = {"program", "Flag1"};
 
   {
     Args args = Args(argc, argv);
     args.Parse();
 
-    EXPECT_EQ(std::nullopt, args.Get("argument1"));
+    EXPECT_EQ(std::nullopt, args.Get("Flag1"));
     EXPECT_EQ(std::nullopt, args.Get("does_not_exist"));
   }
 
@@ -63,7 +67,7 @@ TEST(ArgsTest, Initialization) {
     Args args = Args::From(argc, argv);
     args.Parse();
 
-    EXPECT_EQ(std::nullopt, args.Get("argument1"));
+    EXPECT_EQ(std::nullopt, args.Get("Flag1"));
     EXPECT_EQ(std::nullopt, args.Get("does_not_exist"));
   }
 }
@@ -83,15 +87,15 @@ TEST(ArgsTest, Initialization) {
   }
 } */
 
-TEST(ArgsTest, ItShouldTakeAnRequiredOption) {
+TEST(ArgsTest, RequiredFlag) {
   {
     const char* argv[] = {"ccap", "-n", "John"};
 
     Args args = Args(3, argv);
-    args.Arg(
-        Argument::WithName("name").SetShort('n').Required().ExpectsValue());
+    args.Arg(Flag::WithName("name").Required().ExpectsValue());
     args.Parse();
 
+    EXPECT_TRUE(args.Get("name").has_value());
     EXPECT_EQ("John", args.Get("name").value());
   }
 
@@ -99,29 +103,50 @@ TEST(ArgsTest, ItShouldTakeAnRequiredOption) {
     const char* argv[] = {"ccap", "--name", "John"};
 
     Args args = Args(3, argv);
-    args.Arg(
-        Argument::WithName("name").SetShort('n').Required().ExpectsValue());
-    EXPECT_EXIT(args.Parse(), ::testing::ExitedWithCode(EXIT_FAILURE), "");
-  }
-
-  {
-    const char* argv[] = {"ccap", "--name", "John"};
-
-    Args args = Args(3, argv);
-    args.Arg(
-        Argument::WithName("name").SetLong("name").Required().ExpectsValue());
+    args.Arg(Flag::WithName("name").Required().ExpectsValue());
     args.Parse();
 
+    EXPECT_TRUE(args.Get("name").has_value());
     EXPECT_EQ("John", args.Get("name").value());
   }
 
   {
-    const char* argv[] = {"ccap"};
+    const char* argv[] = {"ccap", "--other", "John"};
 
     Args args = Args(1, argv);
-    args.Arg(
-        Argument::WithName("name").SetShort('n').Required().ExpectsValue());
+    args.Arg(Flag::WithName("name").Required().ExpectsValue());
+
     EXPECT_EXIT(args.Parse(), ::testing::ExitedWithCode(EXIT_FAILURE), "");
+  }
+}
+
+TEST(ArgsTest, ExpectsValue) {
+  {
+    const char* argv[] = {"ccap", "--name"};
+
+    Args args = Args(2, argv);
+    args.Arg(Flag::WithName("name").Required().ExpectsValue());
+
+    EXPECT_EXIT(args.Parse(), ::testing::ExitedWithCode(EXIT_FAILURE), "");
+  }
+
+  {
+    const char* argv[] = {"ccap", "-n"};
+
+    Args args = Args(2, argv);
+    args.Arg(Flag::WithName("name").Required().ExpectsValue());
+
+    EXPECT_EXIT(args.Parse(), ::testing::ExitedWithCode(EXIT_FAILURE), "");
+  }
+
+  {
+    const char* argv[] = {"ccap", "-n"};
+
+    Args args = Args(2, argv);
+    args.Arg(Flag::WithName("name").ExpectsValue());
+    args.Parse();
+
+    EXPECT_FALSE(args.Get("name").has_value());
   }
 }
 
@@ -129,7 +154,7 @@ TEST(ArgsTest, GetValueWithShortOption) {
   const char* argv[] = {"ccap", "-n", "John"};
 
   Args args = Args(3, argv);
-  args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
+  args.Arg(Flag::WithName("name").ExpectsValue());
   args.Parse();
 
   EXPECT_TRUE(args.Get("name").has_value());
@@ -140,59 +165,49 @@ TEST(ArgsTest, GetValueWithLongOption) {
   const char* argv[] = {"ccap", "--name", "John"};
 
   Args args = Args(3, argv);
-  args.Arg(Argument::WithName("name").SetLong("name").ExpectsValue());
+  args.Arg(Flag::WithName("name").SetLong("name").ExpectsValue());
   args.Parse();
 
   EXPECT_TRUE(args.Get("name").has_value());
   EXPECT_EQ("John", args.Get("name").value());
 }
 
-TEST(ArgsTest, GetNoValueWithLongOptionButShortOptionGiven) {
-  const char* argv[] = {"ccap", "-n", "John"};
-
-  Args args = Args(3, argv);
-  args.Arg(Argument::WithName("name").SetLong("name").ExpectsValue());
-  args.Parse();
-
-  EXPECT_FALSE(args.Get("name").has_value());
-}
-
-TEST(ArgsTest, GetNoValueWhenNoValueIsGiven) {
+TEST(ArgsTest, GetNoValueWhenFlagIsNotGiven) {
   const char* argv[] = {"ccap"};
 
   Args args = Args(1, argv);
-  args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
+  args.Arg(Flag::WithName("name").ExpectsValue());
   args.Parse();
 
   EXPECT_FALSE(args.Get("name").has_value());
 }
 
-TEST(ArgsTest, GetNoValueWhenOptionIsNotProperlyGiven) {
+TEST(ArgsTest, GetNoValueWhenFlagIsNotProperlyGiven) {
   const char* argv[] = {"ccap", "-"};
 
   Args args = Args(2, argv);
-  args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
+  args.Arg(Flag::WithName("name").ExpectsValue());
   args.Parse();
 
   EXPECT_FALSE(args.Get("name").has_value());
 }
 
-TEST(ArgsTest, GetNoValueWhenOptionIsGivenButNoValue) {
-  const char* argv[] = {"ccap", "-n"};
-
-  Args args = Args(2, argv);
-  args.Arg(Argument::WithName("name").SetShort('n').ExpectsValue());
-  args.Parse();
-
-  EXPECT_FALSE(args.Get("name").has_value());
-}
-
-TEST(ArgsTest, ItShouldTakeAFlag) {
+TEST(ArgsTest, BooleanFlag) {
   {
     const char* argv[] = {"ccap", "-v"};
 
     Args args = Args(2, argv);
-    args.Arg(Argument::WithName("verbose").SetShort('v'));
+    args.Arg(Flag::WithName("verbose"));
+    args.Parse();
+
+    EXPECT_TRUE(args.IsGiven("verbose"));
+  }
+
+  {
+    const char* argv[] = {"ccap", "--verbose"};
+
+    Args args = Args(2, argv);
+    args.Arg(Flag::WithName("verbose"));
     args.Parse();
 
     EXPECT_TRUE(args.IsGiven("verbose"));
@@ -202,9 +217,9 @@ TEST(ArgsTest, ItShouldTakeAFlag) {
     const char* argv[] = {"ccap", "-v", "-c", "-o"};
 
     Args args = Args(4, argv);
-    args.Arg(Argument::WithName("verbose").SetShort('v'));
-    args.Arg(Argument::WithName("compile").SetShort('c'));
-    args.Arg(Argument::WithName("output").SetShort('o'));
+    args.Arg(Flag::WithName("verbose"));
+    args.Arg(Flag::WithName("compile"));
+    args.Arg(Flag::WithName("output"));
     args.Parse();
 
     EXPECT_TRUE(args.IsGiven("verbose"));
@@ -213,22 +228,12 @@ TEST(ArgsTest, ItShouldTakeAFlag) {
   }
 
   {
-    const char* argv[] = {"ccap", "--verbose"};
-
-    Args args = Args(2, argv);
-    args.Arg(Argument::WithName("verbose").SetLong("verbose"));
-    args.Parse();
-
-    EXPECT_TRUE(args.IsGiven("verbose"));
-  }
-
-  {
     const char* argv[] = {"ccap", "--verbose", "--compile", "--output"};
 
     Args args = Args(4, argv);
-    args.Arg(Argument::WithName("verbose").SetShort('v').SetLong("verbose"));
-    args.Arg(Argument::WithName("compile").SetShort('c').SetLong("compile"));
-    args.Arg(Argument::WithName("output").SetShort('o').SetLong("output"));
+    args.Arg(Flag::WithName("verbose"));
+    args.Arg(Flag::WithName("compile"));
+    args.Arg(Flag::WithName("output"));
     args.Parse();
 
     EXPECT_TRUE(args.IsGiven("verbose"));
@@ -240,9 +245,9 @@ TEST(ArgsTest, ItShouldTakeAFlag) {
     const char* argv[] = {"ccap", "-v", "--compile", "-o"};
 
     Args args = Args(4, argv);
-    args.Arg(Argument::WithName("verbose").SetShort('v').SetLong("verbose"));
-    args.Arg(Argument::WithName("compile").SetShort('c').SetLong("compile"));
-    args.Arg(Argument::WithName("output").SetShort('o').SetLong("output"));
+    args.Arg(Flag::WithName("verbose"));
+    args.Arg(Flag::WithName("compile"));
+    args.Arg(Flag::WithName("output"));
     args.Parse();
 
     EXPECT_TRUE(args.IsGiven("verbose"));
@@ -254,9 +259,9 @@ TEST(ArgsTest, ItShouldTakeAFlag) {
     const char* argv[] = {"ccap", "-v", "--compile"};
 
     Args args = Args(3, argv);
-    args.Arg(Argument::WithName("verbose").SetShort('v').SetLong("verbose"));
-    args.Arg(Argument::WithName("compile").SetShort('c').SetLong("compile"));
-    args.Arg(Argument::WithName("output").SetShort('o').SetLong("output"));
+    args.Arg(Flag::WithName("verbose"));
+    args.Arg(Flag::WithName("compile"));
+    args.Arg(Flag::WithName("output"));
     args.Parse();
 
     EXPECT_TRUE(args.IsGiven("verbose"));

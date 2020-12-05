@@ -14,22 +14,22 @@ namespace ccap {
 
 enum class TerminationType { Exit, Exception };
 
-class Argument {
+class Flag {
  public:
-  Argument() = delete;
-  explicit Argument(const std::string &name);
-  static auto WithName(const std::string &name) -> Argument;
+  Flag() = delete;
+  explicit Flag(const std::string &name);
+  static auto WithName(const std::string &name) -> Flag;
 
   auto GetName() const -> const std::string &;
   auto GetShort() const -> char;
-  auto SetShort(char s) -> Argument &;
+  auto SetShort(char s) -> Flag &;
   auto GetLong() const -> const std::string &;
-  auto SetLong(const std::string &l) -> Argument &;
+  auto SetLong(const std::string &l) -> Flag &;
   auto GetValue() const -> std::optional<std::string>;
-  auto SetValue(const std::string &value) -> Argument &;
-  auto ExpectsValue() -> Argument &;
+  auto SetValue(std::optional<std::string> value) -> Flag &;
+  auto ExpectsValue() -> Flag &;
   auto IsExpectingValue() const -> bool;
-  auto Required() -> Argument &;
+  auto Required() -> Flag &;
   auto IsRequired() const -> bool;
 
   auto IsOption() const -> bool;
@@ -40,7 +40,7 @@ class Argument {
   std::string name_;
   std::string long_;
   char short_ = 0;
-  std::string value_;
+  std::optional<std::string> value_ = std::nullopt;
 
   bool required_ = false;
   bool expects_value_ = false;
@@ -56,16 +56,16 @@ class Args {
 
   static auto From(int argc, char const *argv[]) -> Args;
 
-  // Adds an argument
-  auto Arg(Argument item) -> Args &;
+  // Adds an Flag
+  auto Arg(Flag item) -> Args &;
 
-  // Gets the value of an argument
+  // Gets the value of an Flag
   auto Get(const std::string &arg_name) const -> std::optional<std::string>;
 
   auto IsGiven(const std::string &arg_name) const -> bool;
 
-  // Parses and validates the given arguments
-  // and updates the argument definitions.
+  // Parses and validates the given Flags
+  // and updates the Flag definitions.
   auto Parse() -> Args &;
 
   // Sets the prefered termination type
@@ -78,11 +78,11 @@ class Args {
 
   auto ShowHelp() -> void;
 
-  auto Terminate(const Argument &arg) -> void;
+  auto Terminate(const Flag &arg) -> void;
 
  private:
   std::vector<std::string> raw_args_;
-  std::vector<Argument> args_;
+  std::vector<Flag> args_;
   TerminationType terminateBy_ = TerminationType::Exit;
   int num_args_;
   std::string about_;
@@ -90,6 +90,7 @@ class Args {
   std::string name_;
   std::string version_ = "0.0.1";
 
+  auto GetValueFromRawArgs(int raw_arg_index) -> std::optional<std::string>;
   auto ReadLongArg(int raw_arg_index) -> void;
   auto ReadShortArg(int raw_arg_index) -> void;
 };
@@ -98,67 +99,60 @@ class Args {
 // -- Declarations
 //
 
-Argument::Argument(const std::string &name) : name_{name} {};
+Flag::Flag(const std::string &name)
+    : name_{name}, short_{name.at(0)}, long_{name} {};
 
-auto Argument::WithName(const std::string &name) -> Argument {
-  return Argument(name);
-}
+auto Flag::WithName(const std::string &name) -> Flag { return Flag(name); }
 
-auto Argument::GetName() const -> const std::string & { return name_; }
+auto Flag::GetName() const -> const std::string & { return name_; }
 
-auto Argument::GetShort() const -> char { return short_; }
+auto Flag::GetShort() const -> char { return short_; }
 
-auto Argument::SetShort(char s) -> Argument & {
+auto Flag::SetShort(char s) -> Flag & {
   short_ = s;
   return *this;
 }
 
-auto Argument::GetLong() const -> const std::string & { return long_; }
+auto Flag::GetLong() const -> const std::string & { return long_; }
 
-auto Argument::SetLong(const std::string &l) -> Argument & {
+auto Flag::SetLong(const std::string &l) -> Flag & {
   long_ = l;
   return *this;
 }
 
-auto Argument::SetValue(const std::string &value) -> Argument & {
+auto Flag::SetValue(std::optional<std::string> value) -> Flag & {
   value_ = value;
   return *this;
 }
 
-auto Argument::GetValue() const -> std::optional<std::string> {
-  if (value_.size() > 0) {
-    return value_;
-  }
+auto Flag::GetValue() const -> std::optional<std::string> { return value_; }
 
-  return std::nullopt;
-}
-
-auto Argument::ExpectsValue() -> Argument & {
+auto Flag::ExpectsValue() -> Flag & {
   expects_value_ = true;
 
-  // If the arguments expects a value,
-  // it cannot be an optional flag.
+  // If the Flags expects a value,
+  // it cannot be a boolean flag.
   is_option_ = false;
 
   return *this;
 }
 
-auto Argument::IsExpectingValue() const -> bool { return expects_value_; }
+auto Flag::IsExpectingValue() const -> bool { return expects_value_; }
 
-auto Argument::Required() -> Argument & {
+auto Flag::Required() -> Flag & {
   required_ = true;
   return *this;
 }
 
-auto Argument::IsRequired() const -> bool { return required_; }
+auto Flag::IsRequired() const -> bool { return required_; }
 
-auto Argument::IsOption() const -> bool { return is_option_; }
+auto Flag::IsOption() const -> bool { return is_option_; }
 
-auto Argument::IsGiven() const -> bool { return is_given_; }
+auto Flag::IsGiven() const -> bool { return is_given_; }
 
-auto Argument::SetGiven(bool value) { is_given_ = value; }
+auto Flag::SetGiven(bool value) { is_given_ = value; }
 
-// Initialize the class with the raw arguments.
+// Initialize the class with the raw Flags.
 Args::Args(int argc, char const *argv[]) {
   // Start at 1 because we don't need the program name
   for (int i = 1; i < argc; ++i) {
@@ -168,23 +162,23 @@ Args::Args(int argc, char const *argv[]) {
   num_args_ = argc == 0 ? argc : argc - 1;
 }
 
-// Create an Args instance with the raw arguments.
+// Create an Args instance with the raw Flags.
 auto Args::From(int argc, char const *argv[]) -> Args {
   return Args(argc, argv);
 }
 
-// Add an argument instance.
-auto Args::Arg(Argument item) -> Args & {
+// Add an Flag instance.
+auto Args::Arg(Flag item) -> Args & {
   args_.push_back(item);
   return *this;
 }
 
-// Get the value of an argument.
+// Get the value of an Flag.
 auto Args::Get(const std::string &arg_name) const
     -> std::optional<std::string> {
-  for (const auto &argument : args_) {
-    if (argument.GetName() == arg_name) {
-      return argument.GetValue();
+  for (const auto &Flag : args_) {
+    if (Flag.GetName() == arg_name) {
+      return Flag.GetValue();
     }
   }
 
@@ -193,16 +187,16 @@ auto Args::Get(const std::string &arg_name) const
 
 // Check if the option arg is given.
 auto Args::IsGiven(const std::string &arg_name) const -> bool {
-  for (const auto &argument : args_) {
-    if (argument.GetName() == arg_name) {
-      return argument.IsOption() && argument.IsGiven();
+  for (const auto &Flag : args_) {
+    if (Flag.GetName() == arg_name) {
+      return Flag.IsOption() && Flag.IsGiven();
     }
   }
 
   return false;
 }
 
-// Parse the raw arguments and set the according argument objects.
+// Parse the raw Flags and set the according Flag objects.
 auto Args::Parse() -> Args & {
   for (int i = 0; i < num_args_; ++i) {
     if (raw_args_[i].starts_with("--")) {
@@ -214,7 +208,7 @@ auto Args::Parse() -> Args & {
     }
   }
 
-  // After parsing the raw arguments we need to check that
+  // After parsing the raw Flags we need to check that
   // all args that are marked as 'required' do have values.
   for (auto const &arg : args_) {
     if (arg.IsRequired() && !arg.GetValue().has_value()) {
@@ -225,8 +219,16 @@ auto Args::Parse() -> Args & {
   return *this;
 }
 
+auto Args::GetValueFromRawArgs(int index) -> std::optional<std::string> {
+  if (index >= raw_args_.size()) {
+    return std::nullopt;
+  }
+
+  return raw_args_[index];
+}
+
 auto Args::ReadLongArg(int raw_arg_index) -> void {
-  // To get the name we "cut" away the two '-'
+  // To get the name we "cut" away the "--"
   // e.g.: --name => name
   std::string name = raw_args_[raw_arg_index].substr(2);
   if (name.length() == 0) {
@@ -240,15 +242,14 @@ auto Args::ReadLongArg(int raw_arg_index) -> void {
   // Find the arg with the given name
   for (auto &arg : args_) {
     if (arg.GetLong() == name) {
-      // If the arg expects an value we take the value after
-      // the arg name as that value.
+      // If the flag expects an value we take the value after
+      // the falg name as that value.
       if (arg.IsExpectingValue()) {
-        std::string v = raw_args_[raw_arg_index + 1];
-        arg.SetValue(v);
+        arg.SetValue(GetValueFromRawArgs(raw_arg_index + 1));
       }
 
-      // If the arg is an option we
-      // mark the arg to be given.
+      // If the flag is an option we
+      // mark the flag to be given.
       if (arg.IsOption()) {
         arg.SetGiven(true);
       }
@@ -270,13 +271,7 @@ auto Args::ReadShortArg(int raw_arg_index) -> void {
   for (auto &arg : args_) {
     if (arg.GetShort() == shortName) {
       if (arg.IsExpectingValue()) {
-        // Return when no value is provided
-        if (raw_args_.size() <= raw_arg_index + 1) {
-          return;
-        }
-
-        std::string v = raw_args_[raw_arg_index + 1];
-        arg.SetValue(v);
+        arg.SetValue(GetValueFromRawArgs(raw_arg_index + 1));
       }
 
       if (arg.IsOption()) {
@@ -316,11 +311,11 @@ auto Args::ShowHelp() -> void {
 }
 
 // Terminate the program based on the choosen termination type.
-auto Args::Terminate(const Argument &arg) -> void {
+auto Args::Terminate(const Flag &arg) -> void {
   switch (terminateBy_) {
     case TerminationType::Exit:
-      std::cerr << "Error: Missing required value for argument '"
-                << arg.GetName() << "'\n";
+      std::cerr << "Error: Missing required value for flag '" << arg.GetName()
+                << "'\n";
       exit(EXIT_FAILURE);
 
     case TerminationType::Exception:
